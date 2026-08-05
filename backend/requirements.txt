@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sentence-transformers
+faiss-cpu
+pandas
+pyarrow
+scikit-learn
+rapidfuzz
+python-multipart

@@ -1,0 +1,34 @@
+# ── Python ──────────────────────────────────────────
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+*.pyd
+.Python
+*.egg-info/
+.env
+venv/
+.venv/
+
+# ── Large data files (DO NOT push to GitHub) ────────
+backend/data/embeddings.npy
+backend/data/faiss.index
+backend/data/embedder.pkl
+backend/data/metadata.parquet
+backend/data/cse_papers_with_quartiles.jsonl
+backend/data/cse_papers_with_quartiles_backup.jsonl
+backend/data/cse_papers_with_quartiles_prefilt.jsonl
+backend/data/cse_papers_with_quartiles_filtered.jsonl
+backend/data/raw/
+backend/data/*.jsonl
+
+# ── Frontend ─────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# ── OS & editor ──────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
