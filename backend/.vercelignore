@@ -1,0 +1,7 @@
+Set-Content -Path backend/.vercelignore -Value @(
+  "data/",
+  "scripts/",
+  ".venv/",
+  "venv/",
+  "**/__pycache__/"
+)
