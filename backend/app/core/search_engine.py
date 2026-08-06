@@ -21,7 +21,12 @@ class SearchEngine:
         print("Loading search engine...")
         self.embedder   = TfidfSvdEmbedder.load(str(DATA_DIR / "embedder.pkl"))
         self.index      = faiss.read_index(str(DATA_DIR / "faiss.index"))
-        self.meta       = pd.read_parquet(DATA_DIR / "metadata.parquet")
+        # Load metadata without abstract to save ~40MB RAM.
+        # Abstract is loaded separately only when needed for display.
+        full_meta       = pd.read_parquet(DATA_DIR / "metadata.parquet")
+        self.meta       = full_meta.drop(columns=["abstract"], errors="ignore")
+        self.abstracts  = full_meta["abstract"].fillna("") if "abstract" in full_meta.columns else None
+        del full_meta
         self.n          = len(self.meta)
         # embeddings.npy NOT loaded at startup — saves ~145MB RAM.
         # Vectors are reconstructed from the FAISS index on demand via _get_vecs().

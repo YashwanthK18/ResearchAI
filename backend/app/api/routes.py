@@ -33,17 +33,24 @@ def ss(v):
     v = _clean(v)
     return None if v is None else str(v)
 
-def row_to_dict(row):
+def row_to_dict(row, engine=None):
     def g(k):
         val = row.get(k) if hasattr(row,"get") else getattr(row,k,None)
         return _clean(val)
     q  = g("quartile") or "Unknown"
     aq = g("approx_quartile") or ""
     display_q = q if q != "Unknown" else (aq or "Unknown")
+    # Fetch abstract from engine.abstracts if not in row (memory-saving mode)
+    abstract = g("abstract") or ""
+    if not abstract and engine is not None and engine.abstracts is not None:
+        row_id = g("row_id")
+        if row_id is not None:
+            try: abstract = engine.abstracts.iloc[int(row_id)] or ""
+            except: abstract = ""
     return {
         "paper_id":         ss(g("paper_id")),
         "title":            g("title") or "",
-        "abstract":         (g("abstract") or "")[:800],
+        "abstract":         abstract[:800],
         "year":             si(g("year")),
         "venue":            ss(g("venue")),
         "citations":        si(g("citations")),
@@ -74,7 +81,7 @@ def search(req: SearchReq):
     df = engine.search(req.query, req.top_k, req.min_year, req.max_year,
                        req.quartiles, req.min_citations, scimago_only=req.scimago_only,
                        min_similarity=req.min_similarity)
-    return {"query": req.query, "results": [row_to_dict(r) for _,r in df.iterrows()], "count": len(df)}
+    return {"query": req.query, "results": [row_to_dict(r, engine) for _,r in df.iterrows()], "count": len(df)}
 
 @router.post("/search/pdf")
 async def search_pdf(file: UploadFile = File(...), top_k: int = Query(10)):
@@ -84,13 +91,13 @@ async def search_pdf(file: UploadFile = File(...), top_k: int = Query(10)):
     if not text.strip(): raise HTTPException(400, "No text found in PDF")
     engine = get_engine()
     df = engine.search(text, top_k)
-    return {"query": text[:200]+"...", "results": [row_to_dict(r) for _,r in df.iterrows()], "count": len(df)}
+    return {"query": text[:200]+"...", "results": [row_to_dict(r, engine) for _,r in df.iterrows()], "count": len(df)}
 
 @router.get("/similar/{paper_id}")
 def similar(paper_id: str, top_k: int = Query(8)):
     engine = get_engine()
     df = engine.similar(paper_id, top_k)
-    return {"results": [row_to_dict(r) for _,r in df.iterrows()], "count": len(df)}
+    return {"results": [row_to_dict(r, engine) for _,r in df.iterrows()], "count": len(df)}
 
 # ── TREND ────────────────────────────────────────────────────────────────────
 @router.get("/trend")
@@ -166,7 +173,7 @@ def check_duplicate(req: DupCheckReq):
     for score, idx in zip(scores[0], idxs[0]):
         if float(score) < req.threshold: continue
         row = engine.meta.iloc[idx]
-        d   = row_to_dict(row)
+        d   = row_to_dict(row, engine)
         d["similarity"] = float(score)
         results.append(d)
         if len(results) >= req.top_k: break
@@ -176,7 +183,7 @@ def check_duplicate(req: DupCheckReq):
         fallback = True
         for score, idx in zip(scores[0][:5], idxs[0][:5]):
             row = engine.meta.iloc[idx]
-            d   = row_to_dict(row)
+            d   = row_to_dict(row, engine)
             d["similarity"] = float(score)
             results.append(d)
     return {
