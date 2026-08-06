@@ -19,5 +19,8 @@ gdown 1Tywaykgvh7n4iGpiChxBXv6XMES8qkeS -O data/faiss.index
 echo "Downloading embeddings.npy..."
 gdown 1PbiqclSZMKYinDYmRmfgWRFFMSZppyvi -O data/embeddings.npy
 
+echo "Pre-downloading Sentence-BERT model so startup is fast..."
+python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); print('SBERT model cached.')"
+
 echo "All data files downloaded successfully!"
 ls -lh data/
