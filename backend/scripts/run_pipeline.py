@@ -29,7 +29,7 @@ import faiss
 from rapidfuzz import process, fuzz
 from sentence_transformers import SentenceTransformer
 
-BASE    = Path(__file__).resolve().parent[1]
+BASE    = Path(__file__).resolve().parents[1]
 RAW_DIR = BASE / "data" / "raw"
 DATA    = BASE / "data"
 

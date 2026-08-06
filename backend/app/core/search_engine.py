@@ -22,11 +22,19 @@ class SearchEngine:
         self.embedder   = TfidfSvdEmbedder.load(str(DATA_DIR / "embedder.pkl"))
         self.index      = faiss.read_index(str(DATA_DIR / "faiss.index"))
         self.meta       = pd.read_parquet(DATA_DIR / "metadata.parquet")
-        self.embeddings = np.load(DATA_DIR / "embeddings.npy")
         self.n          = len(self.meta)
-        # Pre-fill NaN approx_quartile with "" so .isin() never crashes
+        # embeddings.npy NOT loaded at startup — saves ~145MB RAM.
+        # Vectors are reconstructed from the FAISS index on demand via _get_vecs().
         self.meta["approx_quartile"] = self.meta["approx_quartile"].fillna("")
         print(f"Search engine ready: {self.n} papers")
+
+    def _get_vecs(self, idxs):
+        """Reconstruct raw vectors from FAISS index (avoids keeping embeddings.npy in RAM)."""
+        idxs = np.array(idxs, dtype=np.int64)
+        vecs = np.zeros((len(idxs), self.index.d), dtype=np.float32)
+        for i, idx in enumerate(idxs):
+            self.index.reconstruct(int(idx), vecs[i])
+        return vecs
 
     # When scimago_only is set, only ~23% of papers survive the filter, so
     # retrieving a fixed pool_size and filtering afterward starves every
@@ -79,7 +87,7 @@ class SearchEngine:
         row = self.meta[self.meta["paper_id"] == paper_id]
         if row.empty: return pd.DataFrame()
         idx  = int(row.iloc[0]["row_id"])
-        vec  = self.embeddings[idx:idx+1]
+        vec  = self._get_vecs([idx])
         scores, idxs = self.index.search(vec, top_k + 1)
         results = self.meta.iloc[idxs[0]].copy()
         results["similarity"] = scores[0]
@@ -141,7 +149,7 @@ class SearchEngine:
             # cap back down to the requested pool size (still relevance-ranked)
             rows = rows.head(pool_size).reset_index(drop=True)
             idxs = idxs[:pool_size]
-        sub  = self.embeddings[idxs]
+        sub  = self._get_vecs(idxs)
         if len(rows) < n_clusters * 2:
             n_clusters = max(2, len(rows) // 5)
         km     = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
@@ -238,7 +246,7 @@ class SearchEngine:
         k   = min(self.n, pool_size)
         _, idxs = self.index.search(vec, k)
         idxs = idxs[0]
-        sub  = self.embeddings[idxs]
+        sub  = self._get_vecs(idxs)
         rows = self.meta.iloc[idxs].reset_index(drop=True)
         sim  = sub @ sub.T
         pairs = []
