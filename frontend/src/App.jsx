@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Search, Brain, Shield, BarChart2, Bookmark,
   BookOpen, ChevronRight, Cpu,
-  Layers, FileText
+  Layers, FileText, Sun, Moon, Monitor
 } from 'lucide-react';
 import SearchPanel          from './components/SearchPanel';
 import ResearchIntelligence from './components/ResearchIntelligence';
@@ -33,15 +33,42 @@ function getSaved() {
   try { return JSON.parse(localStorage.getItem('rp_saved4')||'[]'); } catch { return []; }
 }
 
+function getInitialTheme() {
+  try { return localStorage.getItem('rp_theme') || 'system'; } catch { return 'system'; }
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  } else {
+    root.setAttribute('data-theme', theme);
+  }
+}
+
 export default function App() {
   const [page,    setPage]    = useState('search');
   const [query,   setQuery]   = useState('');
   const [saved,   setSaved]   = useState(getSaved);
   const [stats,   setStats]   = useState(null);
   const [sidebar, setSidebar] = useState(true);
+  const [theme,   setTheme]   = useState(getInitialTheme);
 
   useEffect(()=>{ localStorage.setItem('rp_saved4', JSON.stringify(saved)); }, [saved]);
   useEffect(()=>{ fetchStats().then(setStats).catch(()=>{}); }, []);
+
+  // Apply theme + listen for system preference changes
+  useEffect(()=>{
+    applyTheme(theme);
+    localStorage.setItem('rp_theme', theme);
+    if (theme === 'system') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => applyTheme('system');
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    }
+  }, [theme]);
 
   const toggleSave = p =>
     setSaved(prev => prev.some(x=>x.paper_id===p.paper_id)
@@ -57,7 +84,6 @@ export default function App() {
           <div className="sb-logo"><Brain size={20}/></div>
           <div>
             <span className="sb-name">ResearchAI</span>
-            <span className="sb-sub">For Students &amp; Researchers</span>
           </div>
         </div>
 
@@ -84,6 +110,31 @@ export default function App() {
             <div className="sb-pill"><BookOpen size={12}/><span>{stats.year_min}–{stats.year_max}</span></div>
           </div>
         )}
+
+        {/* Theme switcher */}
+        <div className="sb-theme">
+          <p className="sb-section" style={{marginBottom:6}}>Appearance</p>
+          <div style={{display:'flex',gap:4}}>
+            {[
+              { val:'light',  icon:<Sun size={12}/>,     label:'Light'  },
+              { val:'system', icon:<Monitor size={12}/>, label:'System' },
+              { val:'dark',   icon:<Moon size={12}/>,    label:'Dark'   },
+            ].map(({val,icon,label})=>(
+              <button key={val} onClick={()=>setTheme(val)}
+                title={label}
+                style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3,
+                  padding:'6px 4px',borderRadius:6,border:'none',cursor:'pointer',fontSize:9,fontWeight:600,
+                  transition:'all .15s',
+                  background: theme===val ? 'var(--sb-act-bg)' : 'transparent',
+                  color: theme===val ? '#4f6ef7' : 'var(--sb-tx)',
+                  outline: theme===val ? '1px solid #4f6ef740' : 'none',
+                }}>
+                {icon}{label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="sb-foot">SCImago 2000–2025 · Sentence-BERT</div>
       </aside>
 
@@ -102,7 +153,7 @@ export default function App() {
           <div className="topbar-right">
             <div className="topbar-user">
               <div className="user-av">R</div>
-              <div><div className="user-name">Researcher</div><div className="user-role">Student Mode</div></div>
+              <div><div className="user-name">Researcher</div></div>
             </div>
           </div>
         </header>

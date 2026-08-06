@@ -15,6 +15,22 @@
   --sh:0 2px 8px rgba(0,0,0,.08),0 8px 24px rgba(0,0,0,.06);
   --shs:0 1px 3px rgba(0,0,0,.07)
 }
+
+/* ── DARK MODE ── */
+[data-theme="dark"]{
+  --sb-bg:#060910;--sb-bd:#111827;--sb-tx:#6b7a96;
+  --sb-act:#4f6ef7;--sb-act-bg:#0d1526;--sb-hov:#0a0f1e;
+  --bg:#0f1117;--surf:#161b27;--bd:#1e2536;
+  --tx:#e2e8f0;--tx2:#8892a4;--tx3:#4b5568;
+  --acc:#4f6ef7;--acc2:#6b84f8;--acc-lt:#1a2040;
+  --q1:#22c55e;--q1b:#052e16;--q2:#f59e0b;--q2b:#1c1407;
+  --q3:#f97316;--q3b:#1c0f06;--q4:#ef4444;--q4b:#1c0606;
+  --qu:#94a3b8;--qub:#1e2536;
+  --aq1:#22d3ee;--aq1b:#082030;--aq2:#a78bfa;--aq2b:#1a1040;
+  --aq3:#f472b6;--aq3b:#2d0a1f;--aq4:#fb7185;--aq4b:#2d0a12;
+  --sh:0 2px 8px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+  --shs:0 1px 3px rgba(0,0,0,.3)
+}
 body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   background:var(--bg);color:var(--tx);font-size:14px;line-height:1.55;
   -webkit-font-smoothing:antialiased}
@@ -53,6 +69,7 @@ button,input,select,textarea{font-family:inherit}
   font-weight:700;border-radius:20px;padding:1px 6px}
 .sb-index{padding:8px 8px 0;border-top:1px solid var(--sb-bd)}
 .sb-pill{display:flex;align-items:center;gap:7px;color:var(--sb-tx);font-size:11px;padding:4px 8px}
+.sb-theme{padding:10px 10px 6px;border-top:1px solid var(--sb-bd)}
 .sb-foot{padding:8px 14px 14px;font-size:10px;color:#2a3347;border-top:1px solid var(--sb-bd)}
 
 /* ── TOPBAR ── */

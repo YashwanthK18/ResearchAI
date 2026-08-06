@@ -130,7 +130,7 @@ export default function StatsPanel() {
 
       <p style={{fontSize:11,color:'var(--tx3)',marginTop:8}}>
         Quartile rankings sourced from SCImago Journal &amp; Country Rank (2000–2025).
-        Embeddings: TF-IDF + Truncated SVD (LSA) over title + abstract text.
+        Embeddings: Sentence-BERT (all-MiniLM-L6-v2) over title + abstract text.
       </p>
     </div>
   );
