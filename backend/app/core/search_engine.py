@@ -106,10 +106,11 @@ class SearchEngine:
         vec = self.embed(query)
         k   = self._retrieve_k(pool_size, scimago_only)
         _, idxs = self.index.search(vec, k)
-        rows = self.meta.iloc[idxs[0]].copy()
+        rows = self.meta.iloc[idxs[0]].reset_index(drop=True).copy()
         rows = rows[rows["year"].notna()]
         if scimago_only:
             rows = rows[rows["quartile"] != "Unknown"]
+        rows = rows.head(pool_size).reset_index(drop=True)
         counts = rows.groupby("year").size().reset_index(name="count")
         counts["year"] = counts["year"].astype(int)
         return counts.sort_values("year")
@@ -123,11 +124,17 @@ class SearchEngine:
         rows = rows[rows["year"].notna()]
         if scimago_only:
             rows = rows[rows["quartile"] != "Unknown"]
+        rows = rows.head(pool_size)  # cap after filter
         stop = STOPWORDS
         qt   = set(re.findall(r"[a-z]+", query.lower()))
         buckets = []
         for year, grp in rows.groupby("year"):
-            blob  = " ".join((grp["title"].fillna("") + " " + grp["abstract"].fillna("")).str.lower())
+            titles = grp["title"].fillna("")
+            if self.abstracts is not None:
+                absts = self.abstracts.iloc[grp.index].fillna("")
+            else:
+                absts = pd.Series([""] * len(grp), index=grp.index)
+            blob  = " ".join((titles + " " + absts).str.lower())
             words = [w for w in re.findall(r"[a-z]{3,}", blob) if w not in stop and w not in qt]
             freq  = pd.Series(words).value_counts()
             buckets.append({
@@ -165,13 +172,38 @@ class SearchEngine:
         rows["x"] = coords[:, 0]
         rows["y"] = coords[:, 1]
         stop = STOPWORDS
+
+        # Build per-cluster word frequencies first
+        cluster_freqs = {}
+        for c in range(n_clusters):
+            cr     = rows[rows["cluster"] == c]
+            titles = cr["title"].fillna("")
+            if self.abstracts is not None:
+                absts = self.abstracts.iloc[cr.index].fillna("")
+            else:
+                absts = pd.Series([""] * len(cr), index=cr.index)
+            blob   = " ".join((titles + " " + absts).str.lower())
+            words  = [w for w in re.findall(r"[a-z]{4,}", blob) if w not in stop]
+            cluster_freqs[c] = pd.Series(words).value_counts()
+
+        # Find words that appear in the top-20 of MORE than 60% of clusters
+        # These are corpus-generic terms that don't differentiate clusters
+        all_top = {}
+        for c, freq in cluster_freqs.items():
+            for w in freq.head(20).index:
+                all_top[w] = all_top.get(w, 0) + 1
+        generic = {w for w, cnt in all_top.items() if cnt > n_clusters * 0.6}
+
+        # Also add query words as generic (don't label clusters with the search term)
+        qt = set(re.findall(r"[a-z]+", query.lower()))
+        generic |= qt
+
         clabels = {}
         for c in range(n_clusters):
-            cr   = rows[rows["cluster"] == c]
-            blob = " ".join((cr["title"].fillna("") + " " + cr["abstract"].fillna("")).str.lower())
-            words = [w for w in re.findall(r"[a-z]{4,}", blob) if w not in stop]
-            freq  = pd.Series(words).value_counts()
-            clabels[c] = freq.head(5).index.tolist()
+            freq = cluster_freqs[c]
+            # Filter out generic and query terms, pick top 5 distinctive words
+            distinctive = [w for w in freq.index if w not in generic and len(w) > 3]
+            clabels[c] = distinctive[:5] if distinctive else freq.head(5).index.tolist()
         return rows, clabels
 
     # ── GAP ───────────────────────────────────────────────────────────────────
@@ -185,6 +217,7 @@ class SearchEngine:
         rows["similarity"] = scores[0][:len(rows)]
         if scimago_only:
             rows = rows[rows["quartile"] != "Unknown"]
+        rows = rows.head(pool_size)  # cap after filter
         if len(rows) < 10:
             return {"query": query, "gaps": [], "total_papers_analyzed": 0,
                     "year_range": {}, "year_distribution": [],
@@ -219,7 +252,12 @@ class SearchEngine:
         low_sim  = rows[rows["similarity"] < rows["similarity"].quantile(0.3)]
 
         def top_words(df_sub, n=8):
-            blob  = " ".join((df_sub["title"].fillna("") + " " + df_sub["abstract"].fillna("")).str.lower())
+            titles = df_sub["title"].fillna("")
+            if self.abstracts is not None:
+                absts = self.abstracts.iloc[df_sub.index].fillna("")
+            else:
+                absts = pd.Series([""] * len(df_sub), index=df_sub.index)
+            blob  = " ".join((titles + " " + absts).str.lower())
             words = [w for w in re.findall(r"[a-z]{4,}", blob) if w not in stop and w not in qt]
             return [w for w, _ in pd.Series(words).value_counts().head(n).items()]
 
@@ -227,8 +265,12 @@ class SearchEngine:
         subtopic_gaps = []
         for term in top_words(low_sim, 12):
             if term in dominant: continue
-            mask = rows["title"].str.lower().str.contains(term, na=False) | \
-                   rows["abstract"].str.lower().str.contains(term, na=False)
+            title_mask = rows["title"].str.lower().str.contains(term, na=False)
+            if self.abstracts is not None:
+                abst_mask = self.abstracts.iloc[rows.index].str.lower().str.contains(term, na=False)
+            else:
+                abst_mask = pd.Series([False] * len(rows), index=rows.index)
+            mask = title_mask | abst_mask
             if mask.sum() < 5:
                 subtopic_gaps.append({
                     "year": None, "type": "subtopic_gap", "term": term,

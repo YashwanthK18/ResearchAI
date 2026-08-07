@@ -44,7 +44,7 @@ export default function EvolutionPanel({ sharedQuery }) {
         placeholder='"object detection" or "transformer models"'
         examples={EXAMPLES} value={query} onChange={setQuery}
         onSubmit={run} loading={load} buttonLabel="Analyze Evolution" accentColor="#9333ea"
-        filter={<ScimagoToggle value={scimagoOnly} onChange={setScimagoOnly}/>}
+        filter={<ScimagoToggle value={scimagoOnly} onChange={handleToggle}/>}
       />
     );
   }

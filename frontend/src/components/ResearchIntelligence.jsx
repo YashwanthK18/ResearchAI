@@ -62,7 +62,7 @@ export default function ResearchIntelligence({ sharedQuery }) {
         placeholder='"federated learning" or "object detection"'
         examples={EXAMPLES} value={query} onChange={setQuery}
         onSubmit={handleSubmit} loading={loading} buttonLabel="Analyze Topic" accentColor="#4f6ef7"
-        filter={<ScimagoToggle value={scimagoOnly} onChange={setScimagoOnly}/>}
+        filter={<ScimagoToggle value={scimagoOnly} onChange={handleScimagoToggle}/>}
       />
     );
   }
@@ -93,7 +93,7 @@ export default function ResearchIntelligence({ sharedQuery }) {
       {loading && (
         <div className="loading">
           <Loader2 size={18} className="spin"/>
-          Analyzing 1,200 + 800 + 1,500 papers across trend, evolution and gap…
+          Analyzing up to {scimagoOnly ? 'SCImago-matched' : '3,500'} papers across trend, evolution and gap…
         </div>
       )}
 
@@ -103,7 +103,7 @@ export default function ResearchIntelligence({ sharedQuery }) {
           <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
             <div className="stat-card">
               <div className="stat-num">{trendData?.total_matched?.toLocaleString()||'—'}</div>
-              <div className="stat-lbl">Papers (Trend)</div>
+              <div className="stat-lbl">Papers Analyzed{scimagoOnly ? ' (SCImago)' : ''}</div>
             </div>
             <div className="stat-card">
               <div className="stat-num">{evoData?.buckets?.length||'—'}</div>

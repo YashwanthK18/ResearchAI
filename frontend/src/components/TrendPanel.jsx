@@ -47,7 +47,7 @@ export default function TrendPanel({ sharedQuery }) {
         placeholder="e.g. deep learning, blockchain, federated learning"
         examples={EXAMPLES} value={query} onChange={setQuery}
         onSubmit={run} loading={load} buttonLabel="Analyze Trend" accentColor="#4f6ef7"
-        filter={<ScimagoToggle value={scimagoOnly} onChange={setScimagoOnly}/>}
+        filter={<ScimagoToggle value={scimagoOnly} onChange={handleToggle}/>}
       />
     );
   }

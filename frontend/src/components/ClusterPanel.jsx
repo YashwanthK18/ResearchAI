@@ -83,7 +83,7 @@ export default function ClusterPanel({ sharedQuery }) {
             {[3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} clusters</option>)}
           </select>
         }
-        filter={<ScimagoToggle value={scimagoOnly} onChange={setScimagoOnly}/>}
+        filter={<ScimagoToggle value={scimagoOnly} onChange={handleToggle}/>}
       />
     );
   }

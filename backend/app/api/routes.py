@@ -220,9 +220,15 @@ def topic_summary(query: str = Query(...), pool_size: int = Query(100),
     for _, r in rows.iterrows():
         aq = _clean(r.get("approx_quartile")) or ""
         q  = r.get("quartile") or "Unknown"
+        # fetch abstract from engine.abstracts (separated for RAM saving)
+        row_id = r.get("row_id")
+        abstract = ""
+        if engine.abstracts is not None and row_id is not None:
+            try: abstract = engine.abstracts.iloc[int(row_id)] or ""
+            except: abstract = ""
         papers_info.append({
             "title":    r.get("title") or "",
-            "abstract": (r.get("abstract") or "")[:400],
+            "abstract": abstract[:400],
             "year":     si(r.get("year")),
             "venue":    ss(r.get("venue")),
             "citations":si(r.get("citations")),
@@ -236,14 +242,16 @@ def topic_summary(query: str = Query(...), pool_size: int = Query(100),
     from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS as STOPWORDS
     stop     = STOPWORDS
     qt       = set(re.findall(r"[a-z]+", query.lower()))
-    all_text = " ".join(p["abstract"] for p in papers_info).lower()
+    # Use both title AND abstract for better key term extraction
+    all_text = " ".join(
+        (p["title"] + " " + p["abstract"]) for p in papers_info
+    ).lower()
     words    = [w for w in re.findall(r"[a-z]{4,}", all_text)
                 if w not in stop and w not in qt]
     freq     = Counter(words)
     top_methods = freq.most_common(15)
     years    = [p["year"] for p in papers_info if p["year"]]
 
-    # Build a simple narrative summary from the top terms + year range
     top5 = [w for w,_ in top_methods[:5]]
     yr_min = min(years) if years else None
     yr_max = max(years) if years else None
@@ -255,8 +263,11 @@ def topic_summary(query: str = Query(...), pool_size: int = Query(100),
         if yr_min else f"Analyzed {len(papers_info)} papers on '{query}'."
     )
 
-    # Venue frequency
-    venue_freq = Counter(p["venue"] for p in papers_info if p["venue"])
+    # Build venue list from already-filtered papers_info
+    # Normalize venue names to avoid click mismatch
+    venue_freq = Counter(
+        (p["venue"] or "").strip() for p in papers_info if (p["venue"] or "").strip()
+    )
 
     return {
         "query":            query,

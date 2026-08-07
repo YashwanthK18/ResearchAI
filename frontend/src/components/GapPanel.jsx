@@ -45,7 +45,7 @@ export default function GapPanel({ sharedQuery }) {
           placeholder='"federated learning" or "edge computing security"'
           examples={EXAMPLES} value={query} onChange={setQuery}
           onSubmit={run} loading={load} buttonLabel="Find Gaps" accentColor="#dc2626"
-          filter={<ScimagoToggle value={scimagoOnly} onChange={setScimagoOnly}/>}
+          filter={<ScimagoToggle value={scimagoOnly} onChange={handleToggle}/>}
         />
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,maxWidth:640,margin:'0 auto',padding:'0 20px 40px'}}>
           <div style={{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:'var(--r)',padding:'14px 16px'}}>

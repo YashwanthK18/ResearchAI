@@ -22,7 +22,7 @@ export default function TopicSummary({ sharedQuery }) {
   async function run(e) {
     e?.preventDefault(); if (!query.trim()) return;
     setLoad(true); setErr(null); setSelVenue(null);
-    try { setData(await fetchSummary(query, 100)); }
+    try { setData(await fetchSummary(query, 100, scimagoOnly)); }
     catch(e) { setErr(e.message||'Error'); }
     finally { setLoad(false); }
   }
@@ -31,16 +31,15 @@ export default function TopicSummary({ sharedQuery }) {
     setScimagoOnly(val); setSelVenue(null);
     if (data) {
       setLoad(true); setErr(null);
-      try { setData(await fetchSummary(query, 100)); }
+      try { setData(await fetchSummary(query, 100, val)); }
       catch(e) { setErr(e.message); }
       finally { setLoad(false); }
     }
   }
 
   const papers      = data?.all_papers || data?.top_papers || [];
-  const shown       = scimagoOnly ? papers.filter(p=>p.quartile&&p.quartile!=='Unknown') : papers;
-  const allShown    = shown;
-  const venuePapers = selVenue ? allShown.filter(p => p.venue === selVenue) : null;
+  const shown       = papers;  // backend already applies scimago_only filter
+  const venuePapers = selVenue ? shown.filter(p => (p.venue||'').trim() === selVenue.trim()) : null;
   const displayed   = venuePapers ?? shown;
   const approxCount = displayed.filter(p=>p.is_approx).length;
 
@@ -52,7 +51,7 @@ export default function TopicSummary({ sharedQuery }) {
         placeholder='"transformer models" or "federated learning"'
         examples={EXAMPLES} value={query} onChange={setQuery}
         onSubmit={run} loading={load} buttonLabel="Summarize Topic" accentColor="#0d9488"
-        filter={<ScimagoToggle value={scimagoOnly} onChange={setScimagoOnly}/>}
+        filter={<ScimagoToggle value={scimagoOnly} onChange={handleToggle}/>}
       />
     );
   }
@@ -118,7 +117,7 @@ export default function TopicSummary({ sharedQuery }) {
               {(data.venues||[]).length===0&&<p style={{fontSize:12,color:'var(--tx3)'}}>No venue data available</p>}
               <div style={{display:'flex',flexDirection:'column',gap:5}}>
                 {(data.venues||[]).map((v,i)=>{
-                  const name = v.name||v;
+                    const name = (v.name||v||'').trim();
                   const active = selVenue === name;
                   return (
                     <button key={i} onClick={()=>setSelVenue(active ? null : name)}
